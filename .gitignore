@@ -20,4 +20,4 @@ voices-v1.0.bin
 .claude_consciousness.m8
 .claude/
 *.m8
-
+!assets/**
