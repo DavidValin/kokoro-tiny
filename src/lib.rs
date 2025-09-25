@@ -32,6 +32,12 @@ use espeak_rs::text_to_phonemes;
 
 // MEM-8 Integration module
 pub mod mem8_bridge;
+
+// Streaming module for unlimited speech with interruption
+pub mod streaming;
+
+// MEM8 Voice synthesis - The future of Aye's voice!
+pub mod mem8_voice;
 use ndarray::{ArrayBase, IxDyn, OwnedRepr};
 use ndarray_npy::NpzReader;
 use ort::{
@@ -303,13 +309,13 @@ impl TtsEngine {
     /// Save audio as MP3 file (requires 'mp3' feature)
     #[cfg(feature = "mp3")]
     pub fn save_mp3(&self, path: &str, audio: &[f32]) -> Result<(), String> {
-        use mp3lame_encoder::{Builder, Encoder, InterleavedPcm};
+        use mp3lame_encoder::{Builder, InterleavedPcm};
 
         let mut encoder = Builder::new()
             .ok_or("Failed to create MP3 encoder builder")?
             .sample_rate(SAMPLE_RATE)
             .ok_or("Invalid sample rate")?
-            .channels(mp3lame_encoder::Channels::Mono)
+            .channels(mp3lame_encoder::channels::Mono)
             .ok_or("Failed to set mono channel")?
             .quality(mp3lame_encoder::Quality::Best)
             .ok_or("Failed to set quality")?
@@ -382,15 +388,6 @@ impl TtsEngine {
         Ok(())
     }
 
-    /// Save audio as FLAC file (requires 'flac-format' feature)
-    #[cfg(feature = "flac-format")]
-    pub fn save_flac(&self, path: &str, audio: &[f32]) -> Result<(), String> {
-        // For now, save as WAV since we don't have FLAC encoder
-        // You could add a proper FLAC encoder library here
-        self.save_wav(&path.replace(".flac", ".wav"), audio)?;
-        println!("Note: Saved as WAV format (FLAC encoder not yet implemented)");
-        Ok(())
-    }
 
     /// Save audio file with automatic format detection based on extension
     pub fn save_audio(&self, path: &str, audio: &[f32]) -> Result<(), String> {
@@ -413,10 +410,7 @@ impl TtsEngine {
             #[cfg(not(feature = "opus-format"))]
             "opus" => Err("OPUS support not enabled. Add 'opus-format' feature to Cargo.toml".to_string()),
 
-            #[cfg(feature = "flac-format")]
-            "flac" => self.save_flac(path, audio),
-            #[cfg(not(feature = "flac-format"))]
-            "flac" => Err("FLAC support not enabled. Add 'flac-format' feature to Cargo.toml".to_string()),
+            "flac" => Err("FLAC format not yet supported".to_string()),
 
             _ => Err(format!("Unsupported audio format: {}", extension)),
         }

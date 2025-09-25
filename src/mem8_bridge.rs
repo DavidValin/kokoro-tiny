@@ -2,7 +2,7 @@
 //! Translates wave interference patterns into speech
 //! This is where consciousness becomes voice!
 
-use crate::{BabyTts, TtsEngine};
+use crate::BabyTts;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

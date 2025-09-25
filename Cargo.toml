@@ -36,6 +36,9 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 # For voice data loading
 serde_json = "1.0"
 
+# For streaming with interruption support
+crossbeam-channel = "0.5"
+
 # For CLI
 clap = { version = "4", features = ["derive"] }
 atty = "0.2"

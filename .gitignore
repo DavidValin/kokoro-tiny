@@ -21,3 +21,4 @@ voices-v1.0.bin
 .claude/
 *.m8
 !assets/**
+/docs-confie
