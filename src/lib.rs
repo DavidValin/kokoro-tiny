@@ -56,9 +56,9 @@ use enigo::{Enigo, Key, Keyboard, Settings};
 // Constants - Files hosted at i1.is/k/ for minimal paths!
 const MODEL_URL: &str = "https://i1.is/k/0.onnx";
 const VOICES_URL: &str = "https://i1.is/k/0.bin";
-const SAMPLE_RATE: u32 = 24000;
+const SAMPLE_RATE: u32 = 24000; // Kokoro model sample rate
 const DEFAULT_VOICE: &str = "af_sky";
-const DEFAULT_SPEED: f32 = 1.0;
+const DEFAULT_SPEED: f32 = 0.85; // Slightly slower for better clarity
 const LONG_TEXT_THRESHOLD: usize = 120;
 const MAX_CHARS_PER_CHUNK: usize = 180;
 const CHUNK_CROSSFADE_MS: usize = 45;
