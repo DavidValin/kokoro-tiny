@@ -64,6 +64,7 @@ const MAX_CHARS_PER_CHUNK: usize = 180;
 const CHUNK_CROSSFADE_MS: usize = 45;
 const MIN_ENGINE_SPEED: f32 = 0.35;
 const MAX_ENGINE_SPEED: f32 = 2.2;
+const PAD_TOKEN: char = '$'; // Padding token for beginning/end of phonemes
 
 // Fallback audio message - "Excuse me, I lost my voice. Give me time to get it back."
 // This is a pre-generated minimal WAV file that can play while downloading
@@ -357,20 +358,21 @@ impl TtsEngine {
         let phonemes = text_to_phonemes(text, "en", None, true, false)
             .map_err(|e| format!("Failed to convert text to phonemes: {}", e))?;
 
-        // Join phonemes and tokenize
-        let phonemes_text = phonemes.join(" ");
+        // Join phonemes and add padding tokens at beginning and end
+        // This is crucial to prevent word dropping, especially at the beginning
+        let mut phonemes_text = phonemes.join("");
+        phonemes_text.insert(0, PAD_TOKEN);
+        phonemes_text.push(PAD_TOKEN);
 
-        // Debug: show phoneme and token counts for larger segments
-        if text.len() > 50 {
-            eprintln!("   Text length: {} chars", text.len());
-            eprintln!("   Phonemes array: {} entries", phonemes.len());
-            // Use char-based truncation for UTF-8 safety
-            let preview: String = phonemes_text.chars().take(50).collect();
-            eprintln!("   Phoneme text preview: '{}'", preview);
-            eprintln!("   Phoneme text length: {} chars", phonemes_text.len());
-        }
+        // Always debug for investigation
+        eprintln!("🔍 DEBUG: Text: '{}'", text);
+        eprintln!("   Phonemes array: {} entries", phonemes.len());
+        eprintln!("   Phoneme entries: {:?}", phonemes);
+        eprintln!("   Phoneme text (with padding): '{}'", phonemes_text);
+        eprintln!("   Phoneme text length: {} chars", phonemes_text.len());
 
         let tokens = self.tokenize(phonemes_text);
+        eprintln!("   Tokens: {:?} (len: {})", tokens, tokens.len());
 
         // Run inference with user-specified speed directly
         self.run_inference(session, tokens, style.to_vec(), speed)
@@ -733,15 +735,25 @@ impl TtsEngine {
             .try_extract_tensor::<f32>()
             .map_err(|e| format!("Failed to extract audio tensor: {}", e))?;
 
-        // Debug output shape for longer text
+        // Debug output shape for all outputs
         let data_vec = data.to_vec();
-        if token_count > 100 {
-            eprintln!(
-                "   Output audio shape: {:?}, samples: {}",
-                shape,
-                data_vec.len()
-            );
-        }
+        eprintln!(
+            "   Output audio shape: {:?}, samples: {}",
+            shape,
+            data_vec.len()
+        );
+
+        // Check for silence at beginning
+        let first_100_samples: Vec<f32> = data_vec.iter().take(100).copied().collect();
+        let max_amplitude = first_100_samples.iter().fold(0.0f32, |a, &b| a.max(b.abs()));
+        eprintln!("   First 100 samples max amplitude: {}", max_amplitude);
+
+        // Find first non-silent sample
+        let silence_threshold = 0.001;
+        let first_sound_idx = data_vec.iter()
+            .position(|&sample| sample.abs() > silence_threshold)
+            .unwrap_or(0);
+        eprintln!("   First non-silent sample at index: {}/{}", first_sound_idx, data_vec.len());
 
         Ok(data_vec)
     }
