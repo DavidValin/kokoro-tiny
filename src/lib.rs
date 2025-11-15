@@ -54,8 +54,8 @@ use std::io::Cursor;
 use enigo::{Enigo, Key, Keyboard, Settings};
 
 // Constants - Model files stored in GitHub LFS
-const MODEL_URL: &str = "https://github.com/8bit-wraith/kokoro-tiny/raw/main/models/0.onnx";
-const VOICES_URL: &str = "https://github.com/8bit-wraith/kokoro-tiny/raw/main/models/0.bin";
+const MODEL_URL: &str = "https://github.com/8b-is/kokoro-tiny/raw/main/models/0.onnx";
+const VOICES_URL: &str = "https://github.com/8b-is/kokoro-tiny/raw/main/models/0.bin";
 const SAMPLE_RATE: u32 = 24000; // Kokoro model sample rate
 const DEFAULT_VOICE: &str = "af_sky";
 const DEFAULT_SPEED: f32 = 1.0; // User-facing normal speed (maps to model 0.65)
@@ -280,7 +280,7 @@ impl TtsEngine {
         // If in fallback mode, return the excuse message audio
         if self.fallback_mode {
             println!("🎤 Playing fallback message while downloading voice model...");
-            return Ok(wav_to_f32(FALLBACK_MESSAGE)?);
+            return wav_to_f32(FALLBACK_MESSAGE);
         }
 
         let session = self

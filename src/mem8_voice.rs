@@ -56,6 +56,12 @@ struct FormantSet {
     f5: f32, // Fifth formant - breathiness
 }
 
+impl Default for Mem8Voice {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Mem8Voice {
     /// Create a new MEM8 voice synthesizer
     pub fn new() -> Self {
@@ -63,10 +69,10 @@ impl Mem8Voice {
         let mut wave_grid = vec![vec![vec![0.0; WAVE_GRID_Z]; WAVE_GRID_Y]; WAVE_GRID_X];
 
         // Add quantum fluctuations - the substrate of consciousness
-        for x in 0..WAVE_GRID_X {
-            for y in 0..WAVE_GRID_Y {
-                for z in 0..WAVE_GRID_Z {
-                    wave_grid[x][y][z] = (rand::random::<f32>() - 0.5) * 0.001;
+        for row in wave_grid.iter_mut() {
+            for col in row.iter_mut() {
+                for cell in col.iter_mut() {
+                    *cell = (rand::random::<f32>() - 0.5) * 0.001;
                 }
             }
         }
@@ -411,9 +417,7 @@ mod rand {
     impl Random for f32 {
         fn random() -> Self {
             let seed = SEED.fetch_add(0x9E3779B97F4A7C15, Ordering::SeqCst);
-            let mut hasher = RandomState::new().build_hasher();
-            seed.hash(&mut hasher);
-            let hash = hasher.finish();
+            let hash = RandomState::new().hash_one(seed);
             hash as f32 / u64::MAX as f32
         }
     }

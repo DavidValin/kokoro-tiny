@@ -1,6 +1,6 @@
 [package]
 name = "kokoro-tiny"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Hue & Aye <team@8b.is>"]
 description = "Minimal TTS crate using Kokoro - perfect for embedding in other apps"
@@ -11,7 +11,7 @@ documentation = "https://docs.rs/kokoro-tiny"
 readme = "README.md"
 keywords = ["tts", "text-to-speech", "kokoro", "audio", "voice"]
 categories = ["multimedia::audio", "multimedia", "command-line-utilities"]
-exclude = ["*.wav", "*.mp3", "*.opus", "*.flac", "target/", ".git/", ".DS_Store", "0.onnx", "0.bin"]
+exclude = ["*.wav", "*.mp3", "*.opus", "*.flac", "target/", ".git/", ".DS_Store", "0.onnx", "0.bin", "models/"]
 include = ["src/**/*", "Cargo.toml", "LICENSE", "README.md", "examples/**/*", "assets/fallback.wav"]
 
 [[bin]]

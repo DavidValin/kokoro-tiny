@@ -9,15 +9,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut tts = TtsEngine::new().await?;
 
-    let text = "And the smell of rain out on the farm as it feels like the world is being refreshed.";
+    let text =
+        "And the smell of rain out on the farm as it feels like the world is being refreshed.";
 
     // Get all available voices
     let mut voices: Vec<String> = tts.voices();
     voices.sort();
 
     // Filter to English voices (start with 'a' for American/British female/male)
-    let english_voices: Vec<String> = voices.iter()
-        .filter(|v| v.starts_with("af_") || v.starts_with("am_") || v.starts_with("bf_") || v.starts_with("bm_"))
+    let english_voices: Vec<String> = voices
+        .iter()
+        .filter(|v| {
+            v.starts_with("af_")
+                || v.starts_with("am_")
+                || v.starts_with("bf_")
+                || v.starts_with("bm_")
+        })
         .cloned()
         .collect();
 
@@ -29,7 +36,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match tts.synthesize(text, Some(voice)) {
             Ok(audio) => {
                 let duration_secs = audio.len() as f32 / 24000.0;
-                println!("   Duration: {:.1}s ({} samples)", duration_secs, audio.len());
+                println!(
+                    "   Duration: {:.1}s ({} samples)",
+                    duration_secs,
+                    audio.len()
+                );
 
                 #[cfg(feature = "playback")]
                 {

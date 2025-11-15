@@ -126,7 +126,7 @@ impl StreamingTts {
                     chunks.push(current_chunk.trim().to_string());
 
                     // Add slight overlap for continuity
-                    current_chunk = if chunks.len() > 0 && CHUNK_OVERLAP > 0 {
+                    current_chunk = if !chunks.is_empty() && CHUNK_OVERLAP > 0 {
                         let last_words: Vec<&str> = chunks
                             .last()
                             .unwrap()
@@ -214,7 +214,7 @@ impl StreamingTts {
                 );
 
                 if let Ok(mut engine) = engine.lock() {
-                    match engine.synthesize_with_options(&chunk, Some(&voice), speed, gain) {
+                    match engine.synthesize_with_options(chunk, Some(&voice), speed, gain) {
                         Ok(audio) => {
                             // Send audio to playback thread
                             if audio_tx.send(audio).is_err() {
@@ -323,7 +323,7 @@ impl StreamingTts {
 
             while is_speaking.load(Ordering::Relaxed) {
                 // Non-blocking check for input
-                if let Ok(_) = stdin.read_line(&mut buffer) {
+                if stdin.read_line(&mut buffer).is_ok() {
                     let input = buffer.trim().to_lowercase();
 
                     // Check for interruption phrases
