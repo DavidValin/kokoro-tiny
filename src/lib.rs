@@ -252,8 +252,10 @@ impl TtsEngine {
     }
 
     /// Synthesize text to speech
-    pub fn synthesize(&mut self, text: &str, voice: Option<&str>) -> Result<Vec<f32>, String> {
-        self.synthesize_with_speed(text, voice, DEFAULT_SPEED)
+    /// Synthesize text to speech (backwards compatible with optional speed parameter)
+    /// Speed: 0.5 = half speed (slower), 1.0 = normal, 2.0 = double speed (faster)
+    pub fn synthesize(&mut self, text: &str, voice: Option<&str>, speed: Option<f32>) -> Result<Vec<f32>, String> {
+        self.synthesize_with_speed(text, voice, speed.unwrap_or(DEFAULT_SPEED))
     }
 
     /// Synthesize text to speech with custom speed
@@ -265,6 +267,29 @@ impl TtsEngine {
         speed: f32,
     ) -> Result<Vec<f32>, String> {
         self.synthesize_with_options(text, voice, speed, 1.0)
+    }
+
+    /// Process long text by splitting into chunks (alias for backwards compatibility)
+    /// This method exists for API compatibility - synthesize() already handles long text automatically
+    pub fn process_long_text(&mut self, text: &str, voice: Option<&str>, speed: Option<f32>) -> Result<Vec<f32>, String> {
+        self.synthesize(text, voice, speed)
+    }
+
+    /// Synthesize speech from text with validation warnings (backwards compatibility)
+    /// Returns both the audio and any warnings about the text
+    pub fn synthesize_with_warnings(&mut self, text: &str, voice: Option<&str>, speed: Option<f32>) -> Result<(Vec<f32>, Vec<String>), String> {
+        let mut warnings = Vec::new();
+
+        if text.is_empty() {
+            warnings.push("Empty text provided".to_string());
+        }
+
+        if text.len() > 10000 {
+            warnings.push(format!("Very long text ({} chars) may take a while to process", text.len()));
+        }
+
+        let audio = self.synthesize(text, voice, speed)?;
+        Ok((audio, warnings))
     }
 
     /// Synthesize text to speech with full options
