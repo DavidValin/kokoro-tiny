@@ -24,3 +24,4 @@ voices-v1.0.bin
 *.m8
 !assets/**
 /docs-confie
+.worktrees/
