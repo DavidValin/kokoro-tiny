@@ -4,9 +4,6 @@ use kokoro_tiny::TtsEngine;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize phonemizer first
-    kokoro_tiny::initialize_phonemizer()?;
-
     println!("🧪 Testing English speech synthesis...\n");
 
     let mut tts = TtsEngine::new().await?;
@@ -16,7 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Text: \"{}\"", text);
 
-    let audio = tts.synthesize(text, Some("af_sky"), Some(1.0))?;
+    let audio = tts.synthesize_with_speed(text, Some("af_sky"), 1.0)?;
 
     tts.save_wav("test_english.wav", &audio)?;
     println!("✅ Saved to test_english.wav ({} samples)", audio.len());

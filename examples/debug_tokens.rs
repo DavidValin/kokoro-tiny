@@ -8,7 +8,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("🔍 Debugging tokenization process\n");
 
-    let tts = TtsEngine::new().await?;
+    let mut tts = TtsEngine::new().await?;
 
     let text = "Hello";
 
@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // The library doesn't expose tokenize publicly, so let's trace what happens
     println!("Testing with actual synthesis...");
 
-    match tts.synthesize(text, Some("af_sky"), Some(1.0)) {
+    match tts.synthesize_with_speed(text, Some("af_sky"), 1.0) {
         Ok(audio) => {
             println!("✅ Synthesis succeeded!");
             println!("   Audio length: {} samples ({:.1}s)",

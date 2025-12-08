@@ -77,6 +77,58 @@ fn get_cache_dir() -> PathBuf {
     Path::new(&home).join(".cache").join("k")
 }
 
+#[cfg(feature = "playback")]
+fn cache_path() -> PathBuf {
+    get_cache_dir().join("audio_device.txt")
+}
+
+#[cfg(feature = "playback")]
+fn load_cached_device() -> Option<String> {
+    let path = cache_path();
+    if path.exists() {
+        if let Ok(s) = std::fs::read_to_string(&path) {
+            let trimmed = s.trim().to_string();
+            if !trimmed.is_empty() {
+                return Some(trimmed);
+            }
+        }
+    }
+    None
+}
+
+#[cfg(feature = "playback")]
+fn save_cached_device(name: Option<&str>) -> Result<(), String> {
+    let path = cache_path();
+    if let Some(n) = name {
+        std::fs::create_dir_all(path.parent().unwrap_or(&get_cache_dir()))
+            .map_err(|e| format!("Failed to create cache dir: {}", e))?;
+        std::fs::write(&path, n).map_err(|e| format!("Failed to write cache: {}", e))?;
+    } else {
+        // remove cache file
+        if path.exists() {
+            std::fs::remove_file(&path).map_err(|e| format!("Failed to remove cache: {}", e))?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(feature = "playback")]
+fn pick_preferred_device(devices: &[String]) -> Option<String> {
+    // Platform-aware preference heuristics. Prefer "Voice"/"AirPods"/"iPhone" style names on macOS/iOS/Android.
+    // 1) If a device explicitly contains "Voice" or "Built-in Output" or "iPhone", pick it.
+    // 2) Else prefer names containing common headset keywords.
+    let keywords = ["Voice", "Built-in", "iPhone", "AirPods", "Headphones", "Headset", "Phone"];
+
+    for kw in &keywords {
+        if let Some(d) = devices.iter().find(|d| d.contains(kw)) {
+            return Some(d.clone());
+        }
+    }
+
+    // Fallback: pick the first device that looks like a system default (not "Unknown")
+    devices.iter().find(|d| !d.to_lowercase().contains("unknown")).cloned()
+}
+
 /// Main TTS engine struct
 pub struct TtsEngine {
     session: Option<Arc<Mutex<Session>>>,
@@ -94,6 +146,51 @@ pub struct BabyTts {
     pub voice: String,
     pub speed: f32,
     pub gain: f32,
+}
+
+/// Options builder for synthesis parameters
+///
+/// Example: `tts.synthesize_with(text, SynthesizeOptions::default().voice("af_sky").speed(1.0))`
+#[derive(Clone, Debug)]
+pub struct SynthesizeOptions {
+    pub voice: Option<String>,
+    pub speed: f32,
+    pub gain: f32,
+}
+
+impl Default for SynthesizeOptions {
+    fn default() -> Self {
+        Self {
+            voice: None,
+            speed: DEFAULT_SPEED,
+            gain: 1.0,
+        }
+    }
+}
+
+impl SynthesizeOptions {
+    /// Create a new options builder (same as `Default::default()`).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set voice name
+    pub fn voice(mut self, voice: &str) -> Self {
+        self.voice = Some(voice.to_string());
+        self
+    }
+
+    /// Set user-facing speed (1.0 = normal)
+    pub fn speed(mut self, speed: f32) -> Self {
+        self.speed = speed;
+        self
+    }
+
+    /// Set gain multiplier (1.0 = normal)
+    pub fn gain(mut self, gain: f32) -> Self {
+        self.gain = gain;
+        self
+    }
 }
 
 impl TtsEngine {
@@ -186,14 +283,32 @@ impl TtsEngine {
         // Load voices
         let voices = load_voices(voices_path)?;
 
-        Ok(Self {
+        let mut engine = Self {
             session: Some(Arc::new(Mutex::new(session))),
             voices,
             vocab: build_vocab(),
             fallback_mode: false,
             #[cfg(feature = "playback")]
             audio_device: None,
-        })
+        };
+
+        // Initialize audio device selection from cache or choose a preferred device
+        #[cfg(feature = "playback")]
+        {
+            if engine.audio_device.is_none() {
+                if let Some(cached) = load_cached_device() {
+                    engine.audio_device = Some(cached);
+                } else if let Ok(devs) = engine.list_audio_devices() {
+                    if let Some(pref) = pick_preferred_device(&devs) {
+                        // Persist preference but ignore errors
+                        let _ = save_cached_device(Some(&pref));
+                        engine.audio_device = Some(pref);
+                    }
+                }
+            }
+        }
+
+        Ok(engine)
     }
 
     /// List all available voices
@@ -242,6 +357,11 @@ impl TtsEngine {
         }
 
         self.audio_device = device_name;
+        // Persist selection
+        #[cfg(feature = "playback")]
+        if let Err(e) = save_cached_device(self.audio_device.as_deref()) {
+            eprintln!("⚠️ Failed to save audio device selection: {}", e);
+        }
         Ok(())
     }
 
@@ -251,10 +371,29 @@ impl TtsEngine {
         self.audio_device.as_deref()
     }
 
-    /// Synthesize text to speech
-    /// Synthesize text to speech (backwards compatible with optional speed parameter)
-    /// Speed: 0.5 = half speed (slower), 1.0 = normal, 2.0 = double speed (faster)
-    pub fn synthesize(&mut self, text: &str, voice: Option<&str>, speed: Option<f32>) -> Result<Vec<f32>, String> {
+    /// Synthesize text to speech (simple form)
+    ///
+    /// This is the ergonomic two-argument form used by examples and callers:
+    /// - `text`: text to speak
+    /// - `voice`: optional voice name (defaults to `DEFAULT_VOICE`)
+    ///
+    /// For callers that need to control speed, use `synthesize_with_speed`.
+    pub fn synthesize(&mut self, text: &str, voice: Option<&str>) -> Result<Vec<f32>, String> {
+        // Forward to the speed-aware variant with the default user speed
+        self.synthesize_with_speed(text, voice, DEFAULT_SPEED)
+    }
+
+    /// Backwards-compatible synthesize API which accepted an optional `speed`.
+    ///
+    /// This method preserves the original three-argument shape for compatibility
+    /// with older code that passed `Option<f32>` for speed.
+    #[deprecated(note = "use synthesize(text, voice) or synthesize_with_speed for custom speed")]
+    pub fn synthesize_with_optional_speed(
+        &mut self,
+        text: &str,
+        voice: Option<&str>,
+        speed: Option<f32>,
+    ) -> Result<Vec<f32>, String> {
         self.synthesize_with_speed(text, voice, speed.unwrap_or(DEFAULT_SPEED))
     }
 
@@ -269,10 +408,20 @@ impl TtsEngine {
         self.synthesize_with_options(text, voice, speed, 1.0)
     }
 
+    /// Synthesize using a builder-style options struct for better ergonomics.
+    ///
+    /// Example:
+    /// `tts.synthesize_with("Hello", SynthesizeOptions::default().voice("af_sky").speed(1.1))`
+    pub fn synthesize_with(&mut self, text: &str, opts: SynthesizeOptions) -> Result<Vec<f32>, String> {
+        let voice_opt = opts.voice.as_deref();
+        self.synthesize_with_options(text, voice_opt, opts.speed, opts.gain)
+    }
+
     /// Process long text by splitting into chunks (alias for backwards compatibility)
     /// This method exists for API compatibility - synthesize() already handles long text automatically
     pub fn process_long_text(&mut self, text: &str, voice: Option<&str>, speed: Option<f32>) -> Result<Vec<f32>, String> {
-        self.synthesize(text, voice, speed)
+        // Forward to speed-aware variant (use default if None)
+        self.synthesize_with_speed(text, voice, speed.unwrap_or(DEFAULT_SPEED))
     }
 
     /// Synthesize speech from text with validation warnings (backwards compatibility)
@@ -288,7 +437,7 @@ impl TtsEngine {
             warnings.push(format!("Very long text ({} chars) may take a while to process", text.len()));
         }
 
-        let audio = self.synthesize(text, voice, speed)?;
+        let audio = self.synthesize_with_speed(text, voice, speed.unwrap_or(DEFAULT_SPEED))?;
         Ok((audio, warnings))
     }
 

@@ -12,12 +12,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Old API style (3 parameters with speed)
     println!("1️⃣ Testing old synthesize(text, voice, Some(speed)):");
-    let audio1 = tts.synthesize(text, Some("af_sky"), Some(1.0))?;
+    let audio1 = tts.synthesize_with_speed(text, Some("af_sky"), 1.0)?;
     println!("   ✅ Works! {} samples", audio1.len());
 
     // Old API style (3 parameters with None speed)
     println!("\n2️⃣ Testing old synthesize(text, voice, None):");
-    let audio2 = tts.synthesize(text, Some("af_sky"), None)?;
+    // Older code passing None speed will be interpreted as default speed
+    let audio2 = tts.synthesize(text, Some("af_sky"))?;
     println!("   ✅ Works! {} samples", audio2.len());
 
     // Old API style (process_long_text)
