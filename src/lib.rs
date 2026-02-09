@@ -234,6 +234,17 @@ impl TtsEngine {
             println!("🎤 First time setup - downloading voice model...");
             println!("   (This only happens once, files will be cached in ~/.cache/k)");
 
+            // Auto-play fallback message while downloading (if playback is enabled)
+            #[cfg(feature = "playback")]
+            {
+                // Spawn a thread to play the fallback message
+                thread::spawn(|| {
+                    if let Err(e) = play_fallback_message() {
+                        eprintln!("   ℹ️  Could not play fallback message: {}", e);
+                    }
+                });
+            }
+
             // Try to download the files
             let download_success = {
                 let mut success = true;
@@ -1010,6 +1021,66 @@ async fn download_file(url: &str, path: &str) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
+// Play the fallback message (used during first-time download)
+#[cfg(feature = "playback")]
+fn play_fallback_message() -> Result<(), String> {
+    println!("   🔊 Playing welcome message...");
+    
+    // Decode the fallback WAV to audio samples
+    let audio = wav_to_f32(FALLBACK_MESSAGE)?;
+    
+    // Convert to WAV bytes for playback
+    let wav_data = samples_to_wav_bytes(&audio, SAMPLE_RATE)?;
+    
+    // Setup audio output with default device
+    let (_stream, stream_handle) = OutputStream::try_default()
+        .map_err(|e| format!("Failed to open audio stream: {}", e))?;
+    
+    // Create sink and play
+    let sink = Sink::try_new(&stream_handle)
+        .map_err(|e| format!("Failed to create audio sink: {}", e))?;
+    
+    let cursor = Cursor::new(wav_data);
+    let source = Decoder::new(cursor)
+        .map_err(|e| format!("Failed to decode audio: {}", e))?;
+    
+    sink.append(source);
+    sink.set_volume(0.8);
+    sink.sleep_until_end();
+    
+    Ok(())
+}
+
+// Helper function to convert audio samples to WAV bytes
+fn samples_to_wav_bytes(audio: &[f32], sample_rate: u32) -> Result<Vec<u8>, String> {
+    let mut wav_data = Vec::new();
+    let mut cursor = Cursor::new(&mut wav_data);
+    
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    
+    let mut writer = hound::WavWriter::new(&mut cursor, spec)
+        .map_err(|e| format!("Failed to create WAV writer: {}", e))?;
+    
+    for &sample in audio {
+        let amplitude = (sample * 32767.0).clamp(-32768.0, 32767.0) as i16;
+        writer
+            .write_sample(amplitude)
+            .map_err(|e| format!("Failed to write sample: {}", e))?;
+    }
+    
+    writer
+        .finalize()
+        .map_err(|e| format!("Failed to finalize WAV: {}", e))?;
+    
+    drop(cursor);
+    Ok(wav_data)
+}
+
 // Convert WAV bytes to f32 samples
 fn wav_to_f32(wav_bytes: &[u8]) -> Result<Vec<f32>, String> {
     let cursor = Cursor::new(wav_bytes);
@@ -1018,7 +1089,7 @@ fn wav_to_f32(wav_bytes: &[u8]) -> Result<Vec<f32>, String> {
 
     let samples: Result<Vec<f32>, _> = reader
         .samples::<i16>()
-        .map(|s| s.map(|sample| sample as f32 / 32768.0))
+        .map(|s: Result<i16, _>| s.map(|sample| sample as f32 / 32768.0))
         .collect();
 
     samples.map_err(|e| format!("Failed to read samples: {}", e))
