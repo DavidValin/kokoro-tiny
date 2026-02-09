@@ -38,6 +38,9 @@ pub mod streaming;
 
 // MEM8 Voice synthesis - The future of Aye's voice!
 pub mod mem8_voice;
+
+// MCP Server module for AI collaboration
+pub mod mcp_server;
 use ndarray::{ArrayBase, IxDyn, OwnedRepr};
 use ndarray_npy::NpzReader;
 use ort::{
