@@ -58,8 +58,11 @@ kokoro-tiny = { version = "0.2.0", features = ["full"] }
 
 **All Platforms (Required):**
 ```bash
-# Linux/Ubuntu
+# Debian/Ubuntu
 sudo apt install espeak-ng
+
+# Fedora/RHEL
+sudo dnf install espeak-ng
 
 # macOS
 brew install espeak-ng
@@ -73,12 +76,17 @@ brew install espeak-ng
 If you enable the `playback` feature, additional system libraries are needed:
 
 ```bash
-# Linux/Ubuntu - for playback feature only
+# Debian/Ubuntu - for playback feature only
 sudo apt install libasound2-dev
+
+# Fedora/RHEL - for playback feature only  
+sudo dnf install alsa-lib-devel
 
 # macOS - no additional deps needed
 # Windows - no additional deps needed
 ```
+
+**Note**: The default build requires NO audio system libraries - it generates WAV files only!
 
 ### Basic Usage
 
@@ -339,15 +347,24 @@ cargo run --example device_select --features playback
 ### Build
 
 ```bash
-# Debug build
+# Debug build (no playback, no system dependencies)
 cargo build
 
 # Release build (recommended for performance)
 cargo build --release
 
-# With all features
-cargo build --release --features all-formats,playback,ducking
+# With playback support (requires ALSA on Linux)
+cargo build --release --features playback
+
+# Full features (playback + ducking + all audio formats)
+cargo build --release --features full
 ```
+
+### Cross-Compilation
+
+For cross-compiling (e.g., to ARM/aarch64), see the [ALSA cross-compilation guide](https://github.com/RustAudio/rodio#cross-compiling-aarchaarch64arm).
+
+**Note**: Cross-compilation only applies if using the `playback` feature. Default builds have no system dependencies and cross-compile easily.
 
 ### Run Tests
 
@@ -379,7 +396,31 @@ Use the included `scripts/manage.sh` for easy project management:
 
 ---
 
-## 🧠 Advanced Features
+## 🔧 Advanced Features
+
+### Why No Default Playback?
+
+kokoro-tiny is designed to be maximally portable and embeddable:
+
+- **Default build**: Zero system dependencies (except espeak-ng)
+- **Perfect for**: Servers, embedded systems, CI/CD, containers
+- **Core functionality**: TTS synthesis and WAV generation work everywhere
+
+Audio playback requires platform-specific libraries:
+- **Linux**: ALSA (`libasound2-dev` / `alsa-lib-devel`)
+- **macOS**: CoreAudio (built-in)
+- **Windows**: WASAPI (built-in)
+
+By making playback optional:
+- ✅ Library builds on any platform
+- ✅ No build-time system dependencies by default
+- ✅ Users opt-in to playback when needed
+- ✅ Minimal attack surface for security-conscious deployments
+
+**Enable playback when you need it:**
+```toml
+kokoro-tiny = { version = "0.2.0", features = ["playback"] }
+```
 
 ### Audio Ducking
 
