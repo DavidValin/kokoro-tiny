@@ -1,4 +1,3 @@
-```markdown
 # kokoro-tiny
 
 ## Device Selection & Caching (playback feature)
@@ -25,6 +24,3 @@ let audio = tts.synthesize_with("Hello world", opts)?;
 ## Examples
 
 See `examples/device_select.rs` for how to list devices and test playback across them.
-
-```
-# kokoro-tiny
