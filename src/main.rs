@@ -169,14 +169,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => {
             // Default: read from stdin if available, otherwise show help
             if atty::is(atty::Stream::Stdin) {
-                eprintln!("💡 No input provided. Use --help for usage information.");
-                eprintln!("\nQuick examples:");
-                eprintln!("  kokoro-speak say \"Hello world!\"");
-                eprintln!("  echo \"Build complete\" | kokoro-speak pipe");
-                eprintln!("  kokoro-speak alert success");
-                eprintln!(
-                    "  kokoro-speak context \"Found 5 TypeScript files with 200 lines total\""
-                );
+                // eprintln!("💡 No input provided. Use --help for usage information.");
+                // eprintln!("\nQuick examples:");
+                // eprintln!("  kokoro-speak say \"Hello world!\"");
+                // eprintln!("  echo \"Build complete\" | kokoro-speak pipe");
+                // eprintln!("  kokoro-speak alert success");
+                // eprintln!(
+                //     "  kokoro-speak context \"Found 5 TypeScript files with 200 lines total\""
+                // );
                 return Ok(());
             }
 

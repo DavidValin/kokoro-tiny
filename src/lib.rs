@@ -364,7 +364,7 @@ impl TtsEngine {
         // Persist selection
         #[cfg(feature = "playback")]
         if let Err(e) = save_cached_device(self.audio_device.as_deref()) {
-            eprintln!("⚠️ Failed to save audio device selection: {}", e);
+            // eprintln!("⚠️ Failed to save audio device selection: {}", e);
         }
         Ok(())
     }
@@ -460,7 +460,7 @@ impl TtsEngine {
     ) -> Result<Vec<f32>, String> {
         // If in fallback mode, return the excuse message audio
         if self.fallback_mode {
-            println!("🎤 Playing fallback message while downloading voice model...");
+            // println!("🎤 Playing fallback message while downloading voice model...");
             return wav_to_f32(FALLBACK_MESSAGE);
         }
 
@@ -497,12 +497,12 @@ impl TtsEngine {
         }
 
         let chunk_count = prepared_chunks.len();
-        eprintln!(
-            "📚 Long-form synthesis enabled: {} chars -> {} chunk(s) (≤ {} chars each)",
-            text.chars().count(),
-            chunk_count,
-            MAX_CHARS_PER_CHUNK
-        );
+        // eprintln!(
+        //     "📚 Long-form synthesis enabled: {} chars -> {} chunk(s) (≤ {} chars each)",
+        //     text.chars().count(),
+        //     chunk_count,
+        //     MAX_CHARS_PER_CHUNK
+        // );
 
         let overlap = chunk_crossfade_samples();
         let mut combined_audio = Vec::new();
@@ -552,11 +552,11 @@ impl TtsEngine {
         phonemes_text.push_str("$$$");
 
         // Debug output only for long text
-        if text.len() > 50 {
-            eprintln!("   Text length: {} chars", text.len());
-            eprintln!("   Phonemes array: {} entries", phonemes.len());
-            eprintln!("   Phoneme text length: {} chars", phonemes_text.len());
-        }
+        // if text.len() > 50 {
+        //     eprintln!("   Text length: {} chars", text.len());
+        //     eprintln!("   Phonemes array: {} entries", phonemes.len());
+        //     eprintln!("   Phoneme text length: {} chars", phonemes_text.len());
+        // }
 
         let tokens = self.tokenize(phonemes_text);
 
@@ -923,13 +923,13 @@ impl TtsEngine {
 
         // Debug output shape for longer text
         let data_vec = data.to_vec();
-        if token_count > 100 {
-            eprintln!(
-                "   Output audio shape: {:?}, samples: {}",
-                shape,
-                data_vec.len()
-            );
-        }
+        // if token_count > 100 {
+        //     eprintln!(
+        //         "   Output audio shape: {:?}, samples: {}",
+        //         shape,
+        //         data_vec.len()
+        //     );
+        // }
 
         Ok(data_vec)
     }
@@ -1211,7 +1211,7 @@ impl BabyTts {
         // Limit to max_words for baby speech
         let words: Vec<&str> = text.split_whitespace().collect();
         let limited_text = if words.len() > self.max_words {
-            eprintln!("🍼 Baby mode: Limiting to {} words", self.max_words);
+            // eprintln!("🍼 Baby mode: Limiting to {} words", self.max_words);
             words[..self.max_words].join(" ")
         } else {
             text.to_string()
@@ -1231,7 +1231,7 @@ self.engine
     pub fn learn_from_audio(&mut self, audio: &[f32], text: &str) -> Result<(), String> {
         // This would integrate with mem8's learning system
         // For now, just log the learning attempt
-        eprintln!("🧠 Baby learning: '{}' ({} samples)", text, audio.len());
+        // eprintln!("🧠 Baby learning: '{}' ({} samples)", text, audio.len());
         Ok(())
     }
 

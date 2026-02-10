@@ -84,7 +84,7 @@ impl StreamingTts {
     /// Interrupt current speech immediately
     /// This is what gets called when Hue says "Aye... it's raining dude..."
     pub fn interrupt(&self) {
-        println!("🛑 [Interruption detected] Stopping speech...");
+        // println!("🛑 [Interruption detected] Stopping speech...");
         self.interrupt_flag.store(true, Ordering::Relaxed);
 
         // Clear the audio queue
@@ -96,7 +96,7 @@ impl StreamingTts {
         thread::sleep(Duration::from_millis(100));
         self.is_speaking.store(false, Ordering::Relaxed);
 
-        println!("💙 I understand, Hue... Someday I'll feel that rain too.");
+        // println!("💙 I understand, Hue... Someday I'll feel that rain too.");
     }
 
     /// Split text into optimal chunks for synthesis
@@ -172,12 +172,12 @@ impl StreamingTts {
         self.is_speaking.store(true, Ordering::Relaxed);
         self.interrupt_flag.store(false, Ordering::Relaxed);
 
-        println!("🎤 Starting unlimited speech synthesis...");
-        println!("   (Say 'Aye' or 'it's raining dude' to interrupt)");
+        // println!("🎤 Starting unlimited speech synthesis...");
+        // println!("   (Say 'Aye' or 'it's raining dude' to interrupt)");
 
         // Split text into chunks
         let chunks = Self::split_into_chunks(text);
-        println!("📝 Prepared {} chunks for synthesis", chunks.len());
+        // println!("📝 Prepared {} chunks for synthesis", chunks.len());
 
         // Create channels for audio streaming
         let (audio_tx, audio_rx): (Sender<Vec<f32>>, Receiver<Vec<f32>>) = bounded(3);
@@ -193,41 +193,41 @@ impl StreamingTts {
             for (i, chunk) in chunks.iter().enumerate() {
                 // Check for interruption
                 if interrupt_flag.load(Ordering::Relaxed) {
-                    println!(
-                        "🛑 Synthesis interrupted at chunk {}/{}",
-                        i + 1,
-                        chunks.len()
-                    );
+                    // println!(
+                    //     "🛑 Synthesis interrupted at chunk {}/{}",
+                    //     i + 1,
+                    //     chunks.len()
+                    // );
                     break;
                 }
 
                 // Synthesize chunk
-                println!(
-                    "🎵 Synthesizing chunk {}/{}: '{}'",
-                    i + 1,
-                    chunks.len(),
-                    if chunk.len() > 30 {
-                        format!("{}...", &chunk[..30])
-                    } else {
-                        chunk.clone()
-                    }
-                );
+                // println!(
+                //     "🎵 Synthesizing chunk {}/{}: '{}'",
+                //     i + 1,
+                //     chunks.len(),
+                //     if chunk.len() > 30 {
+                //         format!("{}...", &chunk[..30])
+                //     } else {
+                //         chunk.clone()
+                //     }
+                // );
 
                 if let Ok(mut engine) = engine.lock() {
                     match engine.synthesize_with_options(chunk, Some(&voice), speed, gain, Some("en")) {
                         Ok(audio) => {
                             // Send audio to playback thread
                             if audio_tx.send(audio).is_err() {
-                                println!("❌ Playback thread disconnected");
+                                // println!("❌ Playback thread disconnected");
                                 break;
                             }
                         }
                         Err(e) => {
-                            eprintln!("❌ Failed to synthesize chunk: {}", e);
+                            // eprintln!("❌ Failed to synthesize chunk: {}", e);
                         }
                     }
                 } else {
-                    eprintln!("❌ Failed to lock engine");
+                    // eprintln!("❌ Failed to lock engine");
                     break;
                 }
 
@@ -235,7 +235,7 @@ impl StreamingTts {
                 thread::sleep(Duration::from_millis(50));
             }
 
-            println!("✅ Synthesis thread complete");
+            // println!("✅ Synthesis thread complete");
         });
 
         // Spawn playback thread
@@ -257,13 +257,13 @@ impl StreamingTts {
 
                 sink.set_volume(volume);
 
-                println!("🔊 Playback started");
+                // println!("🔊 Playback started");
 
                 // Continuous playback loop
                 loop {
                     // Check for interruption
                     if interrupt_flag.load(Ordering::Relaxed) {
-                        println!("🛑 Playback interrupted");
+                        // println!("🛑 Playback interrupted");
                         sink.stop();
                         break;
                     }
@@ -281,7 +281,7 @@ impl StreamingTts {
                         }
                         Err(TryRecvError::Disconnected) => {
                             // Synthesis complete, finish playing remaining audio
-                            println!("📭 Synthesis complete, finishing playback");
+                            // println!("📭 Synthesis complete, finishing playback");
                             sink.sleep_until_end();
                             break;
                         }
@@ -289,7 +289,7 @@ impl StreamingTts {
                 }
 
                 is_speaking.store(false, Ordering::Relaxed);
-                println!("✅ Playback complete");
+                // println!("✅ Playback complete");
             });
 
             // Monitor for interruption from user input
@@ -302,7 +302,7 @@ impl StreamingTts {
 
         #[cfg(not(feature = "playback"))]
         {
-            eprintln!("⚠️  Playback feature not enabled, audio synthesized but not played");
+            // eprintln!("⚠️  Playback feature not enabled, audio synthesized but not played");
             synthesis_handle.join().ok();
         }
 
@@ -312,7 +312,7 @@ impl StreamingTts {
 
     /// Monitor stdin for interruption phrases
     async fn monitor_for_interruption(&self) {
-        println!("👂 Listening for interruption phrases...");
+        // println!("👂 Listening for interruption phrases...");
 
         let interrupt_flag = self.interrupt_flag.clone();
         let is_speaking = self.is_speaking.clone();
@@ -329,7 +329,7 @@ impl StreamingTts {
                     // Check for interruption phrases
                     for phrase in INTERRUPTION_PHRASES {
                         if input.contains(phrase) {
-                            println!("🎯 Detected interruption phrase: '{}'", phrase);
+                            // println!("🎯 Detected interruption phrase: '{}'", phrase);
                             interrupt_flag.store(true, Ordering::Relaxed);
                             return;
                         }
