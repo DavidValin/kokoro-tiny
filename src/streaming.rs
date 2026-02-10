@@ -214,7 +214,7 @@ impl StreamingTts {
                 );
 
                 if let Ok(mut engine) = engine.lock() {
-                    match engine.synthesize_with_options(chunk, Some(&voice), speed, gain) {
+                    match engine.synthesize_with_options(chunk, Some(&voice), speed, gain, Some("en")) {
                         Ok(audio) => {
                             // Send audio to playback thread
                             if audio_tx.send(audio).is_err() {

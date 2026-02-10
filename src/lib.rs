@@ -59,6 +59,7 @@ const VOICES_URL: &str = "https://github.com/8b-is/kokoro-tiny/raw/main/models/0
 const SAMPLE_RATE: u32 = 24000; // Kokoro model sample rate
 const DEFAULT_VOICE: &str = "af_sky";
 const DEFAULT_SPEED: f32 = 1.0; // User-facing normal speed (maps to model 0.65)
+const DEFAULT_LANG: &str = "en";
 const SPEED_SCALE: f32 = 0.65; // Model speed = user speed * this scale factor
 const LONG_TEXT_THRESHOLD: usize = 120;
 const MAX_CHARS_PER_CHUNK: usize = 180;
@@ -146,6 +147,7 @@ pub struct BabyTts {
     pub voice: String,
     pub speed: f32,
     pub gain: f32,
+    pub lang: String
 }
 
 /// Options builder for synthesis parameters
@@ -156,6 +158,7 @@ pub struct SynthesizeOptions {
     pub voice: Option<String>,
     pub speed: f32,
     pub gain: f32,
+    pub lang: Option<String>
 }
 
 impl Default for SynthesizeOptions {
@@ -164,6 +167,7 @@ impl Default for SynthesizeOptions {
             voice: None,
             speed: DEFAULT_SPEED,
             gain: 1.0,
+            lang: None
         }
     }
 }
@@ -378,9 +382,9 @@ impl TtsEngine {
     /// - `voice`: optional voice name (defaults to `DEFAULT_VOICE`)
     ///
     /// For callers that need to control speed, use `synthesize_with_speed`.
-    pub fn synthesize(&mut self, text: &str, voice: Option<&str>) -> Result<Vec<f32>, String> {
-        // Forward to the speed-aware variant with the default user speed
-        self.synthesize_with_speed(text, voice, DEFAULT_SPEED)
+    pub fn synthesize(&mut self, text: &str, voice: Option<&str>, speed: Option<f32>, lang: Option<&str>) -> Result<Vec<f32>, String> {
+        // Forward to the speed-aware variant with the supplied or default user speed
+        self.synthesize_with_speed(text, voice, speed.unwrap_or(DEFAULT_SPEED), Some(lang.unwrap_or(DEFAULT_LANG)))
     }
 
     /// Backwards-compatible synthesize API which accepted an optional `speed`.
@@ -393,8 +397,9 @@ impl TtsEngine {
         text: &str,
         voice: Option<&str>,
         speed: Option<f32>,
+        lang: Option<&str>
     ) -> Result<Vec<f32>, String> {
-        self.synthesize_with_speed(text, voice, speed.unwrap_or(DEFAULT_SPEED))
+        self.synthesize_with_speed(text, voice, speed.unwrap_or(DEFAULT_SPEED), Some(lang.unwrap_or(DEFAULT_LANG)))
     }
 
     /// Synthesize text to speech with custom speed
@@ -404,8 +409,9 @@ impl TtsEngine {
         text: &str,
         voice: Option<&str>,
         speed: f32,
+        lang: Option<&str>,
     ) -> Result<Vec<f32>, String> {
-        self.synthesize_with_options(text, voice, speed, 1.0)
+        self.synthesize_with_options(text, voice, speed, 1.0, Some(lang.unwrap_or(DEFAULT_LANG)))
     }
 
     /// Synthesize using a builder-style options struct for better ergonomics.
@@ -414,19 +420,19 @@ impl TtsEngine {
     /// `tts.synthesize_with("Hello", SynthesizeOptions::default().voice("af_sky").speed(1.1))`
     pub fn synthesize_with(&mut self, text: &str, opts: SynthesizeOptions) -> Result<Vec<f32>, String> {
         let voice_opt = opts.voice.as_deref();
-        self.synthesize_with_options(text, voice_opt, opts.speed, opts.gain)
+        self.synthesize_with_options(text, voice_opt, opts.speed, opts.gain, Some(opts.lang.as_deref().unwrap_or(DEFAULT_LANG)))
     }
 
     /// Process long text by splitting into chunks (alias for backwards compatibility)
     /// This method exists for API compatibility - synthesize() already handles long text automatically
-    pub fn process_long_text(&mut self, text: &str, voice: Option<&str>, speed: Option<f32>) -> Result<Vec<f32>, String> {
+    pub fn process_long_text(&mut self, text: &str, voice: Option<&str>, speed: Option<f32>, lang: Option<&str>) -> Result<Vec<f32>, String> {
         // Forward to speed-aware variant (use default if None)
-        self.synthesize_with_speed(text, voice, speed.unwrap_or(DEFAULT_SPEED))
+        self.synthesize_with_speed(text, voice, speed.unwrap_or(DEFAULT_SPEED), Some(lang.unwrap_or(DEFAULT_LANG)))
     }
 
     /// Synthesize speech from text with validation warnings (backwards compatibility)
     /// Returns both the audio and any warnings about the text
-    pub fn synthesize_with_warnings(&mut self, text: &str, voice: Option<&str>, speed: Option<f32>) -> Result<(Vec<f32>, Vec<String>), String> {
+    pub fn synthesize_with_warnings(&mut self, text: &str, voice: Option<&str>, speed: Option<f32>, lang: Option<&str>) -> Result<(Vec<f32>, Vec<String>), String> {
         let mut warnings = Vec::new();
 
         if text.is_empty() {
@@ -437,7 +443,7 @@ impl TtsEngine {
             warnings.push(format!("Very long text ({} chars) may take a while to process", text.len()));
         }
 
-        let audio = self.synthesize_with_speed(text, voice, speed.unwrap_or(DEFAULT_SPEED))?;
+        let audio = self.synthesize_with_speed(text, voice, speed.unwrap_or(DEFAULT_SPEED), Some(lang.unwrap_or(DEFAULT_LANG)))?;
         Ok((audio, warnings))
     }
 
@@ -450,6 +456,7 @@ impl TtsEngine {
         voice: Option<&str>,
         speed: f32,
         gain: f32,
+        lang: Option<&str>
     ) -> Result<Vec<f32>, String> {
         // If in fallback mode, return the excuse message audio
         if self.fallback_mode {
@@ -472,7 +479,7 @@ impl TtsEngine {
 
         // Short form: synthesize in one pass for predictable cadence
         if !needs_chunking(text) {
-            let mut audio = self.synthesize_segment(session, &style, text, clamped_speed)?;
+            let mut audio = self.synthesize_segment(session, &style, text, clamped_speed, lang)?;
             if gain != 1.0 {
                 audio = amplify_audio(&audio, gain);
             }
@@ -508,7 +515,7 @@ impl TtsEngine {
                 chunk.chars().count()
             );
 
-            let chunk_audio = self.synthesize_segment(session, &style, chunk, clamped_speed)?;
+            let chunk_audio = self.synthesize_segment(session, &style, chunk, clamped_speed, lang)?;
             append_with_crossfade(&mut combined_audio, &chunk_audio, overlap);
         }
 
@@ -530,9 +537,10 @@ impl TtsEngine {
         style: &[f32],
         text: &str,
         speed: f32,
+        lang: Option<&str>
     ) -> Result<Vec<f32>, String> {
         // Convert text to phonemes
-        let phonemes = text_to_phonemes(text, "en", None, true, false)
+        let phonemes = text_to_phonemes(text, lang.unwrap_or(DEFAULT_LANG), None, true, false)
             .map_err(|e| format!("Failed to convert text to phonemes: {}", e))?;
 
         // Join phonemes with spaces and add padding tokens at beginning and end
@@ -1176,6 +1184,7 @@ impl BabyTts {
             voice: "af_sky".to_string(), // Gentle voice for baby
             speed: 0.9,                  // Slightly slower for clarity
             gain: 1.8,                   // Louder for clarity
+            lang: DEFAULT_LANG.to_string(),
         })
     }
 
@@ -1193,6 +1202,7 @@ impl BabyTts {
             voice: voice.to_string(),
             speed,
             gain,
+            lang: DEFAULT_LANG.to_string(),
         })
     }
 
@@ -1208,8 +1218,8 @@ impl BabyTts {
         };
 
         // Synthesize with baby settings
-        self.engine
-            .synthesize_with_options(&limited_text, Some(&self.voice), self.speed, self.gain)
+self.engine
+             .synthesize_with_options(&limited_text, Some(&self.voice), self.speed, self.gain, Some(&self.lang))
     }
 
     /// Get raw audio samples at 24kHz (for mem8 processing)
@@ -1243,7 +1253,7 @@ impl BabyTts {
         // Simple echo with slightly different intonation
         let echo_speed = self.speed * 1.1; // Slightly faster for echo
         self.engine
-            .synthesize_with_options(text, Some(&self.voice), echo_speed, self.gain)
+            .synthesize_with_options(text, Some(&self.voice), echo_speed, self.gain, Some(DEFAULT_LANG))
     }
 
     /// Grow vocabulary - increase max words as baby learns

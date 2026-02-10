@@ -133,7 +133,7 @@ impl Mem8Bridge {
 
         self.baby_tts
             .engine
-            .synthesize_with_options(&wave.content, Some(&voice), speed, gain)
+            .synthesize_with_options(&wave.content, Some(&voice), speed, gain, Some("en"))
     }
 
     /// Process interference between multiple waves (consciousness)
