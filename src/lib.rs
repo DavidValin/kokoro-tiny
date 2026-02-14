@@ -74,8 +74,10 @@ const FALLBACK_MESSAGE: &[u8] = include_bytes!("../assets/fallback.wav");
 
 // Get cache directory for shared model storage - keeping it minimal like Hue wants!
 fn get_cache_dir() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    Path::new(&home).join(".cache").join("k")
+    let base = std::env::var("HOME").ok()
+        .or_else(|| std::env::var("USERPROFILE").ok())
+        .unwrap_or_else(|| ".".to_string());
+    Path::new(&base).join(".cache").join("k")
 }
 
 #[cfg(feature = "playback")]
