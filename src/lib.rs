@@ -226,8 +226,10 @@ impl TtsEngine {
         let need_download = !Path::new(model_path).exists() || !Path::new(voices_path).exists();
 
         if need_download {
+            #[cfg(not(feature = "as-lib"))]
             println!("🎤 First time setup - downloading voice model...");
-            println!("   (This only happens once, files will be cached in ~/.cache/k)");
+            #[cfg(not(feature = "as-lib"))]
+              println!("   (This only happens once, files will be cached in ~/.cache/k)");
 
             // Try to download the files
             let download_success = {
@@ -235,8 +237,10 @@ impl TtsEngine {
 
                 // Download model if needed
                 if !Path::new(model_path).exists() {
+                    #[cfg(not(feature = "as-lib"))]
                     println!("   📥 Downloading model (310MB)...");
                     if let Err(e) = download_file(MODEL_URL, model_path).await {
+                        #[cfg(not(feature = "as-lib"))]
                         eprintln!("   ❌ Failed to download model: {}", e);
                         success = false;
                     }
@@ -244,14 +248,17 @@ impl TtsEngine {
 
                 // Download voices if needed
                 if success && !Path::new(voices_path).exists() {
+                    #[cfg(not(feature = "as-lib"))]
                     println!("   📥 Downloading voices (27MB)...");
                     if let Err(e) = download_file(VOICES_URL, voices_path).await {
+                        #[cfg(not(feature = "as-lib"))]
                         eprintln!("   ❌ Failed to download voices: {}", e);
                         success = false;
                     }
                 }
 
                 if success {
+                    #[cfg(not(feature = "as-lib"))]
                     println!("   ✅ Voice model downloaded successfully!");
                 }
 
@@ -260,9 +267,13 @@ impl TtsEngine {
 
             // If download failed, return fallback engine
             if !download_success {
+                #[cfg(not(feature = "as-lib"))]
                 eprintln!("\n⚠️  Using fallback mode. The model files are not available at:");
+                #[cfg(not(feature = "as-lib"))]
                 eprintln!("   - {}", MODEL_URL);
+                #[cfg(not(feature = "as-lib"))]
                 eprintln!("   - {}", VOICES_URL);
+                #[cfg(not(feature = "as-lib"))]
                 eprintln!("\n💡 Please manually download the model files to ~/.cache/k/");
 
                 return Ok(Self {
@@ -366,7 +377,8 @@ impl TtsEngine {
         // Persist selection
         #[cfg(feature = "playback")]
         if let Err(e) = save_cached_device(self.audio_device.as_deref()) {
-            // eprintln!("⚠️ Failed to save audio device selection: {}", e);
+            #[cfg(not(feature = "as-lib"))]
+            eprintln!("⚠️ Failed to save audio device selection: {}", e);
         }
         Ok(())
     }
@@ -499,23 +511,25 @@ impl TtsEngine {
         }
 
         let chunk_count = prepared_chunks.len();
-        // eprintln!(
-        //     "📚 Long-form synthesis enabled: {} chars -> {} chunk(s) (≤ {} chars each)",
-        //     text.chars().count(),
-        //     chunk_count,
-        //     MAX_CHARS_PER_CHUNK
-        // );
+        #[cfg(not(feature = "as-lib"))]
+        eprintln!(
+            "📚 Long-form synthesis enabled: {} chars -> {} chunk(s) (≤ {} chars each)",
+            text.chars().count(),
+            chunk_count,
+            MAX_CHARS_PER_CHUNK
+        );
 
         let overlap = chunk_crossfade_samples();
         let mut combined_audio = Vec::new();
 
         for (idx, chunk) in prepared_chunks.iter().enumerate() {
-            // eprintln!(
-            //     "   → Chunk {}/{} ({} chars)",
-            //     idx + 1,
-            //     chunk_count,
-            //     chunk.chars().count()
-            // );
+            #[cfg(not(feature = "as-lib"))]
+            eprintln!(
+                "   → Chunk {}/{} ({} chars)",
+                idx + 1,
+                chunk_count,
+                chunk.chars().count()
+            );
 
             let chunk_audio = self.synthesize_segment(session, &style, chunk, clamped_speed, lang)?;
             append_with_crossfade(&mut combined_audio, &chunk_audio, overlap);
@@ -554,11 +568,12 @@ impl TtsEngine {
         phonemes_text.push_str("$$$");
 
         // Debug output only for long text
-        // if text.len() > 50 {
-        //     eprintln!("   Text length: {} chars", text.len());
-        //     eprintln!("   Phonemes array: {} entries", phonemes.len());
-        //     eprintln!("   Phoneme text length: {} chars", phonemes_text.len());
-        // }
+        #[cfg(not(feature = "as-lib"))]
+        if text.len() > 50 {
+            eprintln!("   Text length: {} chars", text.len());
+            eprintln!("   Phonemes array: {} entries", phonemes.len());
+            eprintln!("   Phoneme text length: {} chars", phonemes_text.len());
+        }
 
         let tokens = self.tokenize(phonemes_text);
 
@@ -925,13 +940,14 @@ impl TtsEngine {
 
         // Debug output shape for longer text
         let data_vec = data.to_vec();
-        // if token_count > 100 {
-        //     eprintln!(
-        //         "   Output audio shape: {:?}, samples: {}",
-        //         shape,
-        //         data_vec.len()
-        //     );
-        // }
+        #[cfg(not(feature = "as-lib"))]
+        if token_count > 100 {
+            eprintln!(
+                "   Output audio shape: {:?}, samples: {}",
+                shape,
+                data_vec.len()
+            );
+        }
 
         Ok(data_vec)
     }
@@ -1213,7 +1229,8 @@ impl BabyTts {
         // Limit to max_words for baby speech
         let words: Vec<&str> = text.split_whitespace().collect();
         let limited_text = if words.len() > self.max_words {
-            // eprintln!("🍼 Baby mode: Limiting to {} words", self.max_words);
+            #[cfg(not(feature = "as-lib"))]
+            eprintln!("🍼 Baby mode: Limiting to {} words", self.max_words);
             words[..self.max_words].join(" ")
         } else {
             text.to_string()
@@ -1233,7 +1250,8 @@ self.engine
     pub fn learn_from_audio(&mut self, audio: &[f32], text: &str) -> Result<(), String> {
         // This would integrate with mem8's learning system
         // For now, just log the learning attempt
-        // eprintln!("🧠 Baby learning: '{}' ({} samples)", text, audio.len());
+        #[cfg(not(feature = "as-lib"))]
+        eprintln!("🧠 Baby learning: '{}' ({} samples)", text, audio.len());
         Ok(())
     }
 
@@ -1261,7 +1279,8 @@ self.engine
     /// Grow vocabulary - increase max words as baby learns
     pub fn grow(&mut self) {
         self.max_words = (self.max_words + 1).min(20); // Cap at 20 words for kokoro-tiny
-        eprintln!(
+        #[cfg(not(feature = "as-lib"))]
+eprintln!(
             "🌱 Baby growing! Can now speak {} words at once",
             self.max_words
         );

@@ -52,6 +52,7 @@ audiopus = { version = "0.2", optional = true }
 enigo = { version = "0.2", optional = true }  # Cross-platform input simulation for volume keys
 
 [features]
+# Disable eprintln! when building as library
 default = ["playback", "ducking"]
 mp3 = ["mp3lame-encoder"]
 cuda = ["ort/cuda"]
@@ -59,6 +60,7 @@ playback = ["cpal", "rodio"]
 ducking = ["enigo"]  # Audio ducking - reduces other audio volume during TTS
 opus-format = ["audiopus"]
 all-formats = ["mp3", "opus-format"]
+as-lib = []
 
 [[example]]
 name = "simple"

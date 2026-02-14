@@ -223,11 +223,13 @@ impl StreamingTts {
                             }
                         }
                         Err(e) => {
-                            // eprintln!("❌ Failed to synthesize chunk: {}", e);
+                            #[cfg(not(feature = "as-lib"))]
+                            eprintln!("❌ Failed to synthesize chunk: {}", e);
                         }
                     }
                 } else {
-                    // eprintln!("❌ Failed to lock engine");
+                    #[cfg(not(feature = "as-lib"))]
+                    eprintln!("❌ Failed to lock engine");
                     break;
                 }
 
@@ -302,7 +304,8 @@ impl StreamingTts {
 
         #[cfg(not(feature = "playback"))]
         {
-            // eprintln!("⚠️  Playback feature not enabled, audio synthesized but not played");
+            #[cfg(not(feature = "as-lib"))]
+            eprintln!("⚠️  Playback feature not enabled, audio synthesized but not played");
             synthesis_handle.join().ok();
         }
 

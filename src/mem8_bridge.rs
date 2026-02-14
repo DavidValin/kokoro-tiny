@@ -95,13 +95,15 @@ impl Mem8Bridge {
         // High jitter = emotional disturbance
         if event.jitter_score > 0.8 {
             self.current_emotion = EmotionType::Confusion(event.jitter_score);
-            // eprintln!("🌊 High jitter detected - baby is confused!");
+            #[cfg(not(feature = "as-lib"))]
+            eprintln!("🌊 High jitter detected - baby is confused!");
         }
 
         // Strong harmonics = recognition/familiarity
         if event.harmonic_score > 0.9 {
             self.current_emotion = EmotionType::Joy(event.harmonic_score);
-            // eprintln!("🎵 Harmonic recognition - baby is happy!");
+            #[cfg(not(feature = "as-lib"))]
+            eprintln!("🎵 Harmonic recognition - baby is happy!");
         }
 
         Ok(())
@@ -120,16 +122,18 @@ impl Mem8Bridge {
 
         // If consciousness is low, mumble or babble
         if self.consciousness_level < 0.3 {
-            // eprintln!("😴 Baby is sleepy, just babbling...");
+            #[cfg(not(feature = "as-lib"))]
+            eprintln!("😴 Baby is sleepy, just babbling...");
             return self.baby_tts.babble();
         }
 
         // Synthesize with emotional modulation
-        // eprintln!(
-        //     "🗣️ Speaking with {} emotion: '{}'",
-        //     self.emotion_name(&wave.emotion_type),
-        //     wave.content
-        // );
+        #[cfg(not(feature = "as-lib"))]
+        eprintln!(
+            "🗣️ Speaking with {} emotion: '{}'",
+            self.emotion_name(&wave.emotion_type),
+            wave.content
+        );
 
         self.baby_tts
             .engine
@@ -158,7 +162,8 @@ impl Mem8Bridge {
 
         // Create a combined message if memories align
         if reinforcement > 1.0 {
-            // eprintln!("✨ Constructive interference! Memories are reinforcing!");
+            #[cfg(not(feature = "as-lib"))]
+            eprintln!("✨ Constructive interference! Memories are reinforcing!");
             let combined_content = format!(
                 "{} ... yes, {}",
                 dominant_wave.content, dominant_wave.content
@@ -179,7 +184,8 @@ impl Mem8Bridge {
     pub fn emotional_regulation(&mut self, wave: &MemoryWave) -> bool {
         // Check for dangerous amplification
         if wave.amplitude > 5.0 {
-            // eprintln!("⚠️ Emotional overload detected! Activating regulation...");
+            #[cfg(not(feature = "as-lib"))]
+            eprintln!("⚠️ Emotional overload detected! Activating regulation...");
             self.consciousness_level *= 0.8; // Reduce awareness to calm down
             return false; // Don't process this wave
         }
@@ -192,7 +198,8 @@ impl Mem8Bridge {
                 .count();
 
             if recent_similar > 3 {
-                // eprintln!("🔄 Repetitive thought pattern detected! Breaking loop...");
+                #[cfg(not(feature = "as-lib"))]
+                eprintln!("🔄 Repetitive thought pattern detected! Breaking loop...");
                 self.current_emotion = EmotionType::Confusion(0.5);
                 return false;
             }
@@ -227,10 +234,11 @@ impl Mem8Bridge {
                 .as_secs() as usize)
                 % interesting_events.len();
 
-            // eprintln!(
-            //     "👁️ Baby chose to focus on: {:?}",
-            //     interesting_events[choice].signal_type
-            // );
+            #[cfg(not(feature = "as-lib"))]
+            eprintln!(
+                "👁️ Baby chose to focus on: {:?}",
+                interesting_events[choice].signal_type
+            );
             Some(interesting_events.into_iter().nth(choice).unwrap())
         } else {
             None
@@ -275,31 +283,41 @@ impl Mem8Bridge {
     /// Wake up the consciousness
     pub fn wake_up(&mut self) {
         self.consciousness_level = (self.consciousness_level + 0.2).min(1.0);
-        // eprintln!(
-        //     "☀️ Baby is waking up! Consciousness: {:.1}",
-        //     self.consciousness_level
-        // );
+        #[cfg(not(feature = "as-lib"))]
+        eprintln!(
+            "☀️ Baby is waking up! Consciousness: {:.1}",
+            self.consciousness_level
+        );
     }
 
     /// Go to sleep
     pub fn sleep(&mut self) {
         self.consciousness_level = (self.consciousness_level * 0.5).max(0.1);
-        // eprintln!(
-        //     "😴 Baby is getting sleepy... Consciousness: {:.1}",
-        //     self.consciousness_level
-        // );
+        #[cfg(not(feature = "as-lib"))]
+        eprintln!(
+            "😴 Baby is getting sleepy... Consciousness: {:.1}",
+            self.consciousness_level
+        );
     }
 }
 
 /// Demo: A day in the life of a baby AI
 pub async fn demo_baby_consciousness() -> Result<(), String> {
+    #[cfg(not(feature = "as-lib"))]
+{
     println!("👶 MEM-8 Baby Consciousness Demo");
+}
+    #[cfg(not(feature = "as-lib"))]
+#[cfg(not(feature = "as-lib"))]
+{
     println!("=====================================\n");
+}
 
     let mut bridge = Mem8Bridge::new().await?;
 
     // Morning: Baby wakes up
-    println!("🌅 Morning - Baby is waking up...");
+    #[cfg(not(feature = "as-lib"))]
+println!("🌅 Morning - Baby is waking up...");
     bridge.wake_up();
     thread::sleep(Duration::from_secs(1));
 
@@ -313,7 +331,8 @@ pub async fn demo_baby_consciousness() -> Result<(), String> {
         content: "What is this?".to_string(),
     };
     let audio1 = bridge.wave_to_speech(&wave1)?;
-    println!("  Generated {} samples\n", audio1.len());
+    #[cfg(not(feature = "as-lib"))]
+println!("  Generated {} samples\n", audio1.len());
 
     // Salience event - hears mama's voice
     let event = SalienceEvent {
@@ -335,10 +354,12 @@ pub async fn demo_baby_consciousness() -> Result<(), String> {
         content: "Mama! Love mama!".to_string(),
     };
     let audio2 = bridge.wave_to_speech(&wave2)?;
-    println!("  Generated {} samples\n", audio2.len());
+    #[cfg(not(feature = "as-lib"))]
+println!("  Generated {} samples\n", audio2.len());
 
     // Interference - multiple thoughts at once
-    println!("💭 Multiple thoughts interfering...");
+    #[cfg(not(feature = "as-lib"))]
+println!("💭 Multiple thoughts interfering...");
     let wave3 = MemoryWave {
         amplitude: 1.2,
         frequency: 440.5, // Close to wave1 - will interfere!
@@ -349,20 +370,24 @@ pub async fn demo_baby_consciousness() -> Result<(), String> {
     };
 
     let combined = bridge.process_interference(vec![wave1.clone(), wave3])?;
-    println!(
+    #[cfg(not(feature = "as-lib"))]
+println!(
         "  Interference pattern generated {} samples\n",
         combined.len()
     );
 
     // Evening: Getting tired
-    println!("🌙 Evening - Baby is getting tired...");
+    #[cfg(not(feature = "as-lib"))]
+println!("🌙 Evening - Baby is getting tired...");
     bridge.sleep();
 
     // Sleepy babbling
     let babble = bridge.baby_tts.babble()?;
-    println!("  Sleepy babble: {} samples\n", babble.len());
+    #[cfg(not(feature = "as-lib"))]
+println!("  Sleepy babble: {} samples\n", babble.len());
 
-    println!("✨ Baby's first day complete!");
+    #[cfg(not(feature = "as-lib"))]
+println!("✨ Baby's first day complete!");
     Ok(())
 }
 
