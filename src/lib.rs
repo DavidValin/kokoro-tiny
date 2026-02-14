@@ -1028,7 +1028,7 @@ async fn download_file(url: &str, path: &str) -> Result<(), Box<dyn std::error::
 // Play the fallback message (used during first-time download)
 #[cfg(feature = "playback")]
 fn play_fallback_message() -> Result<(), String> {
-    println!("   🔊 Playing welcome message...");
+    eprintln!("   🔊 Playing welcome message...");
     
     // Decode the fallback WAV to audio samples
     let audio = wav_to_f32(FALLBACK_MESSAGE)?;
