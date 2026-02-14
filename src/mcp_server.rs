@@ -11,7 +11,6 @@
 
 use crate::TtsEngine;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
 
 /// MCP Protocol version
