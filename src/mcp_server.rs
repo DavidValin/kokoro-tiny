@@ -356,16 +356,30 @@ impl McpServer {
 
         let duration_ms = (audio.len() as f32 / 24000.0 * 1000.0) as u32;
 
+        let played = cfg!(feature = "playback");
+
+        let status_text = if played {
+            format!(
+                "🔊 Spoke: \"{}\"\nVoice: {}\nDuration: {}ms",
+                text,
+                voice.unwrap_or("af_sky"),
+                duration_ms
+            )
+        } else {
+            format!(
+                "💾 Synthesized (playback disabled): \"{}\"\nVoice: {}\nDuration: {}ms",
+                text,
+                voice.unwrap_or("af_sky"),
+                duration_ms
+            )
+        };
+
         Ok(serde_json::json!({
             "content": [{
                 "type": "text",
-                "text": format!("🔊 Spoke: \"{}\"\nVoice: {}\nDuration: {}ms", 
-                    text, 
-                    voice.unwrap_or("af_sky"),
-                    duration_ms
-                )
+                "text": status_text
             }],
-            "played": true,
+            "played": played,
             "duration_ms": duration_ms,
             "voice": voice.unwrap_or("af_sky")
         }))
